@@ -87,6 +87,7 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
     for (final part in textParts) {
       final language = _detectLanguage(part);
       await _flutterTts.setLanguage(language == 'TH' ? 'th-TH' : 'en-US');
+      await _flutterTts.setSpeechRate(1.2); // Adjust speech rate here
       await _flutterTts.setPitch(1.0);
       await _flutterTts.speak(part);
       await _flutterTts.awaitSpeakCompletion(true);
@@ -95,7 +96,14 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
 
   String _detectLanguage(String text) {
     final thaiRegex = RegExp(r'[\u0E00-\u0E7F]');
-    return thaiRegex.hasMatch(text) ? 'TH' : 'EN';
+    final numberRegex = RegExp(r'[0-9]');
+    if (thaiRegex.hasMatch(text)) {
+      return 'TH';
+    } else if (numberRegex.hasMatch(text)) {
+      return 'TH'; // Ensure numbers are read in Thai
+    } else {
+      return 'EN';
+    }
   }
 
   List<String> _splitTextByLanguage(String text) {
@@ -141,29 +149,29 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
       ),
       body: patientDetails != null && medications != null
           ? SingleChildScrollView(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildPatientProfileSection(),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => Functionmonth(hn: widget.hn))),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue[900],
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    ),
-                    child: Text(
-                      getText('รายการยาย้อนหลัง', 'Previous medicine list'),
-                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  _buildMedicationSection(),
-                ],
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildPatientProfileSection(),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => Functionmonth(hn: widget.hn))),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue[900],
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
-            )
+              child: Text(
+                getText('รายการยาย้อนหลัง', 'Previous medicine list'),
+                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+              ),
+            ),
+            const SizedBox(height: 20),
+            _buildMedicationSection(),
+          ],
+        ),
+      )
           : const Center(child: CircularProgressIndicator()),
     );
   }
@@ -300,14 +308,14 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
         borderRadius: BorderRadius.circular(5.0),
         child: base64Image != null && base64Image.isNotEmpty
             ? Image.memory(
-                base64Decode(base64Image),
-                width: 150,
-                height: 150,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return const Icon(Icons.broken_image, size: 150);
-                },
-              )
+          base64Decode(base64Image),
+          width: 150,
+          height: 150,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return const Icon(Icons.broken_image, size: 150);
+          },
+        )
             : const Icon(Icons.image, size: 150),
       ),
     );

@@ -83,32 +83,49 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
   }
 
   Future<void> _speak(String text) async {
+    await _flutterTts.stop(); // หยุดการพูดก่อนหน้า (ถ้ามี)
     final textParts = _splitTextByLanguage(text);
-    for (int i = 0; i < textParts.length; i++) {
-      final part = textParts[i];
-      final nextPart = i + 1 < textParts.length ? textParts[i + 1] : '';
-      final language = _detectLanguage(nextPart);
-      final speechText = _convertNumbers(part, language);
+    for (final part in textParts) {
+      final language = _detectLanguage(part, 0);
       await _flutterTts.setLanguage(language == 'TH' ? 'th-TH' : 'en-US');
-      await _flutterTts.setSpeechRate(3.2); // Adjust speech rate here
+      await _flutterTts.setSpeechRate(1.2); // ปรับความเร็วในการพูดให้อยู่ในระดับที่ฟังง่ายขึ้น
       await _flutterTts.setPitch(1.0);
-      await _flutterTts.speak(speechText);
-      await _flutterTts.awaitSpeakCompletion(true);
+      await _flutterTts.speak(part);
+      await _flutterTts.awaitSpeakCompletion(true); // รอการพูดแต่ละส่วนให้เสร็จสิ้นก่อนพูดส่วนถัดไป
     }
   }
 
-  String _detectLanguage(String text) {
+
+
+  String _detectLanguage(String text, int index) {
     final thaiRegex = RegExp(r'[\u0E00-\u0E7F]');
-    return thaiRegex.hasMatch(text) ? 'TH' : 'EN';
+    final numberRegex = RegExp(r'[0-9]');
+    if (thaiRegex.hasMatch(text)) {
+      return 'TH';
+    } else if (numberRegex.hasMatch(text)) {
+      if (index + 1 < text.length) {
+        final nextChar = text[index + 1];
+        if (thaiRegex.hasMatch(nextChar)) {
+          return 'TH';
+        } else {
+          return 'EN';
+        }
+      }
+      return 'EN'; // Default to English if no next character
+    } else {
+      return 'EN';
+    }
   }
+
 
   List<String> _splitTextByLanguage(String text) {
     final parts = <String>[];
     final buffer = StringBuffer();
     String? currentLanguage;
 
-    for (final char in text.split('')) {
-      final charLanguage = _detectLanguage(char);
+    for (int i = 0; i < text.length; i++) {
+      final char = text[i];
+      final charLanguage = _detectLanguage(char, i);
       if (currentLanguage == null || charLanguage == currentLanguage) {
         buffer.write(char);
         currentLanguage = charLanguage;
@@ -125,37 +142,6 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
     return parts;
   }
 
-  String _convertNumbers(String text, String language) {
-    final numberRegex = RegExp(r'\d+');
-    return text.splitMapJoin(
-      numberRegex,
-      onMatch: (m) => _numberToWords(int.parse(m.group(0)!), language),
-      onNonMatch: (n) => n,
-    );
-  }
-
-  String _numberToWords(int number, String language) {
-    if (language == 'TH') {
-      return _numberToThaiWords(number);
-    } else {
-      return number.toString();
-    }
-  }
-
-  String _numberToThaiWords(int number) {
-    final thaiNumbers = ['ศูนย์', 'หนึ่ง', 'สอง', 'สาม', 'สี่', 'ห้า', 'หก', 'เจ็ด', 'แปด', 'เก้า'];
-    final thaiUnits = ['', 'สิบ', 'ร้อย', 'พัน', 'หมื่น', 'แสน', 'ล้าน'];
-    final buffer = StringBuffer();
-    final digits = number.toString().split('').map(int.parse).toList();
-    for (int i = 0; i < digits.length; i++) {
-      final digit = digits[digits.length - 1 - i];
-      final unit = i < thaiUnits.length ? thaiUnits[i] : '';
-      if (digit != 0) {
-        buffer.write('${thaiNumbers[digit]}$unit');
-      }
-    }
-    return buffer.toString().split('').reversed.join('');
-  }
 
   @override
   Widget build(BuildContext context) {

@@ -86,6 +86,7 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
     await _flutterTts.stop(); // หยุดการพูดก่อนหน้า (ถ้ามี)
     final textParts = _splitTextByLanguage(text);
     for (final part in textParts) {
+      if (part.trim().isEmpty) continue; // ข้ามส่วนที่เป็นช่องว่างหรือว่างเปล่า
       final language = _detectLanguage(part, 0);
       await _flutterTts.setLanguage(language == 'TH' ? 'th-TH' : 'en-US');
       await _flutterTts.setSpeechRate(1.0); // ปรับความเร็วในการพูดให้อยู่ในระดับที่ฟังง่ายขึ้น
@@ -94,6 +95,7 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
       await _flutterTts.awaitSpeakCompletion(false); // ไม่รอการพูดแต่ละส่วนให้เสร็จสิ้นก่อนพูดส่วนถัดไป
     }
   }
+
 
 
   String _detectLanguage(String text, int index) {
@@ -114,6 +116,7 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
       return 'EN';
     }
   }
+
 
   List<String> _splitTextByLanguage(String text) {
     final parts = <String>[];
@@ -138,6 +141,7 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
     }
     return parts;
   }
+
 
   @override
   Widget build(BuildContext context) {

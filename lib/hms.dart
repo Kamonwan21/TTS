@@ -85,8 +85,10 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
   Future<void> _speak(String text) async {
     await _flutterTts.stop(); // หยุดการพูดก่อนหน้า (ถ้ามี)
     final textParts = _splitTextByLanguage(text);
+
     for (final part in textParts) {
       if (part.trim().isEmpty) continue; // ข้ามส่วนที่เป็นช่องว่างหรือว่างเปล่า
+
       final language = _detectLanguage(part, 0);
       await _flutterTts.setLanguage(language == 'TH' ? 'th-TH' : 'en-US');
       await _flutterTts.setSpeechRate(1.0); // ปรับความเร็วในการพูดให้อยู่ในระดับที่ฟังง่ายขึ้น
@@ -97,16 +99,17 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
   }
 
 
-
   String _detectLanguage(String text, int index) {
     final thaiRegex = RegExp(r'[\u0E00-\u0E7F]');
     final numberRegex = RegExp(r'[0-9]');
+
     if (thaiRegex.hasMatch(text)) {
       return 'TH';
     } else if (numberRegex.hasMatch(text)) {
       // พิจารณาตัวอักษรก่อนและหลังตัวเลข
       final nextChar = index + 1 < text.length ? text[index + 1] : '';
       final prevChar = index > 0 ? text[index - 1] : '';
+
       if (thaiRegex.hasMatch(nextChar) || thaiRegex.hasMatch(prevChar)) {
         return 'TH';
       } else {
@@ -117,7 +120,6 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
     }
   }
 
-
   List<String> _splitTextByLanguage(String text) {
     final parts = <String>[];
     final buffer = StringBuffer();
@@ -126,12 +128,15 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
     for (int i = 0; i < text.length; i++) {
       final char = text[i];
       final charLanguage = _detectLanguage(char, i);
+
       if (currentLanguage == null || charLanguage == currentLanguage) {
         buffer.write(char);
         currentLanguage = charLanguage;
       } else {
-        parts.add(buffer.toString());
-        buffer.clear();
+        if (buffer.isNotEmpty) {
+          parts.add(buffer.toString());
+          buffer.clear();
+        }
         buffer.write(char);
         currentLanguage = charLanguage;
       }

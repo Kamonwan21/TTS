@@ -90,62 +90,76 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
       if (part.trim().isEmpty) continue; // ข้ามส่วนที่เป็นช่องว่างหรือว่างเปล่า
 
       final language = _detectLanguage(part, 0);
-      await _flutterTts.setLanguage(language == 'TH' ? 'th-TH' : 'en-US');
-      await _flutterTts.setSpeechRate(1.0); // ปรับความเร็วในการพูดให้อยู่ในระดับที่ฟังง่ายขึ้น
-      await _flutterTts.setPitch(1.0);
-      await _flutterTts.speak(part);
-      await _flutterTts.awaitSpeakCompletion(false); // ไม่รอการพูดแต่ละส่วนให้เสร็จสิ้นก่อนพูดส่วนถัดไป
+      try {
+        await _flutterTts.setLanguage(language == 'TH' ? 'th-TH' : 'en-US');
+        await _flutterTts.setSpeechRate(1.0); // ปรับความเร็วในการพูดให้อยู่ในระดับที่ฟังง่ายขึ้น
+        await _flutterTts.setPitch(1.0);
+        await _flutterTts.speak(part);
+        await _flutterTts.awaitSpeakCompletion(false); // ไม่รอการพูดแต่ละส่วนให้เสร็จสิ้นก่อนพูดส่วนถัดไป
+      } catch (e) {
+        print('Error in _speak part: $part, error: $e');
+      }
     }
   }
+
 
 
   String _detectLanguage(String text, int index) {
     final thaiRegex = RegExp(r'[\u0E00-\u0E7F]');
     final numberRegex = RegExp(r'[0-9]');
-
-    if (thaiRegex.hasMatch(text)) {
-      return 'TH';
-    } else if (numberRegex.hasMatch(text)) {
-      // พิจารณาตัวอักษรก่อนและหลังตัวเลข
-      final nextChar = index + 1 < text.length ? text[index + 1] : '';
-      final prevChar = index > 0 ? text[index - 1] : '';
-
-      if (thaiRegex.hasMatch(nextChar) || thaiRegex.hasMatch(prevChar)) {
+    try {
+      if (thaiRegex.hasMatch(text)) {
         return 'TH';
+      } else if (numberRegex.hasMatch(text)) {
+        // พิจารณาตัวอักษรก่อนและหลังตัวเลข
+        final nextChar = index + 1 < text.length ? text[index + 1] : '';
+        final prevChar = index > 0 ? text[index - 1] : '';
+        if (thaiRegex.hasMatch(nextChar) || thaiRegex.hasMatch(prevChar)) {
+          return 'TH';
+        } else {
+          return 'EN';
+        }
       } else {
         return 'EN';
       }
-    } else {
+    } catch (e) {
+      print('Error in _detectLanguage: $e');
       return 'EN';
     }
   }
+
 
   List<String> _splitTextByLanguage(String text) {
     final parts = <String>[];
     final buffer = StringBuffer();
     String? currentLanguage;
 
-    for (int i = 0; i < text.length; i++) {
-      final char = text[i];
-      final charLanguage = _detectLanguage(char, i);
-
-      if (currentLanguage == null || charLanguage == currentLanguage) {
-        buffer.write(char);
-        currentLanguage = charLanguage;
-      } else {
-        if (buffer.isNotEmpty) {
-          parts.add(buffer.toString());
-          buffer.clear();
+    try {
+      for (int i = 0; i < text.length; i++) {
+        final char = text[i];
+        final charLanguage = _detectLanguage(char, i);
+        if (currentLanguage == null || charLanguage == currentLanguage) {
+          buffer.write(char);
+          currentLanguage = charLanguage;
+        } else {
+          if (buffer.isNotEmpty) {
+            parts.add(buffer.toString());
+            buffer.clear();
+          }
+          buffer.write(char);
+          currentLanguage = charLanguage;
         }
-        buffer.write(char);
-        currentLanguage = charLanguage;
       }
+      if (buffer.isNotEmpty) {
+        parts.add(buffer.toString());
+      }
+    } catch (e) {
+      print('Error in _splitTextByLanguage: $e');
     }
-    if (buffer.isNotEmpty) {
-      parts.add(buffer.toString());
-    }
+
     return parts;
   }
+
 
 
   @override

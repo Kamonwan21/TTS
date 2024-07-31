@@ -103,7 +103,6 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
   }
 
 
-
   String _detectLanguage(String text, int index) {
     final thaiRegex = RegExp(r'[\u0E00-\u0E7F]');
     final numberRegex = RegExp(r'[0-9]');
@@ -112,9 +111,9 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
         return 'TH';
       } else if (numberRegex.hasMatch(text)) {
         // พิจารณาตัวอักษรก่อนและหลังตัวเลข
-        final nextChar = index + 1 < text.length ? text[index + 1] : '';
-        final prevChar = index > 0 ? text[index - 1] : '';
-        if (thaiRegex.hasMatch(nextChar) || thaiRegex.hasMatch(prevChar)) {
+        final nextChar = index + 1 < text.length ? text[index + 1] : null;
+        final prevChar = index > 0 ? text[index - 1] : null;
+        if ((nextChar != null && thaiRegex.hasMatch(nextChar)) || (prevChar != null && thaiRegex.hasMatch(prevChar))) {
           return 'TH';
         } else {
           return 'EN';
@@ -127,7 +126,6 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
       return 'EN';
     }
   }
-
 
   List<String> _splitTextByLanguage(String text) {
     final parts = <String>[];
@@ -159,7 +157,6 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
 
     return parts;
   }
-
 
 
   @override

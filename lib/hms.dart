@@ -88,13 +88,12 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
     for (final part in textParts) {
       final language = _detectLanguage(part, 0);
       await _flutterTts.setLanguage(language == 'TH' ? 'th-TH' : 'en-US');
-      await _flutterTts.setSpeechRate(1.2); // ปรับความเร็วในการพูดให้อยู่ในระดับที่ฟังง่ายขึ้น
+      await _flutterTts.setSpeechRate(1.0); // ปรับความเร็วในการพูดให้อยู่ในระดับที่ฟังง่ายขึ้น
       await _flutterTts.setPitch(1.0);
       await _flutterTts.speak(part);
-      await _flutterTts.awaitSpeakCompletion(true); // รอการพูดแต่ละส่วนให้เสร็จสิ้นก่อนพูดส่วนถัดไป
+      await _flutterTts.awaitSpeakCompletion(false); // ไม่รอการพูดแต่ละส่วนให้เสร็จสิ้นก่อนพูดส่วนถัดไป
     }
   }
-
 
 
   String _detectLanguage(String text, int index) {
@@ -103,20 +102,18 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
     if (thaiRegex.hasMatch(text)) {
       return 'TH';
     } else if (numberRegex.hasMatch(text)) {
-      if (index + 1 < text.length) {
-        final nextChar = text[index + 1];
-        if (thaiRegex.hasMatch(nextChar)) {
-          return 'TH';
-        } else {
-          return 'EN';
-        }
+      // พิจารณาตัวอักษรก่อนและหลังตัวเลข
+      final nextChar = index + 1 < text.length ? text[index + 1] : '';
+      final prevChar = index > 0 ? text[index - 1] : '';
+      if (thaiRegex.hasMatch(nextChar) || thaiRegex.hasMatch(prevChar)) {
+        return 'TH';
+      } else {
+        return 'EN';
       }
-      return 'EN'; // Default to English if no next character
     } else {
       return 'EN';
     }
   }
-
 
   List<String> _splitTextByLanguage(String text) {
     final parts = <String>[];
@@ -141,7 +138,6 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
     }
     return parts;
   }
-
 
   @override
   Widget build(BuildContext context) {

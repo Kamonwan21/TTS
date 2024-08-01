@@ -90,6 +90,7 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
     text = text.replaceAll("พ.ญ.", "แพทย์หญิง");
     text = text.replaceAll("นพ.", "นายแพทย์");
     text = text.replaceAll("ชม.", "ชั่วโมง");
+    text = _removeThaiSpaces(text);
     final textParts = _splitTextByLanguage(text);
     for (final part in textParts) {
       final language = _detectLanguage(part);
@@ -99,6 +100,22 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
       await _flutterTts.speak(part);
       await _flutterTts.awaitSpeakCompletion(true);
     }
+  }
+
+  String _removeThaiSpaces(String text) {
+    final thaiRegex = RegExp(r'[\u0E00-\u0E7F]');
+    final buffer = StringBuffer();
+
+    for (var i = 0; i < text.length; i++) {
+      final char = text[i];
+      if (thaiRegex.hasMatch(char) && i > 0 && thaiRegex.hasMatch(text[i - 1])) {
+        buffer.write(char);
+      } else {
+        buffer.write(char == ' ' ? '' : char);
+      }
+    }
+
+    return buffer.toString();
   }
 
   String _detectLanguage(String text) {

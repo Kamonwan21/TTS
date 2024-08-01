@@ -1,9 +1,9 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'dart:convert';
 import 'hms_month.dart';
 import 'login.dart';
 
@@ -12,10 +12,10 @@ class HomeMedSheet extends StatefulWidget {
   final String hn;
 
   const HomeMedSheet({
-    super.key,
+    Key? key,
     required this.visitId,
     required this.hn,
-  });
+  }) : super(key: key);
 
   @override
   State<HomeMedSheet> createState() => _HomeMedSheetState();
@@ -29,15 +29,13 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
   @override
   void initState() {
     super.initState();
-    _fetchPatientDetails();
     _initializeLocaleData();
+    _fetchPatientDetails();
   }
 
   Future<void> _initializeLocaleData() async {
-    await initializeDateFormatting(
-        'th', null); // Initialize locale data for Thai
-    await initializeDateFormatting(
-        'en', null); // Initialize locale data for English
+    await initializeDateFormatting('th', null);
+    await initializeDateFormatting('en', null);
   }
 
   Future<void> _fetchPatientDetails() async {
@@ -71,11 +69,9 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
   }
 
   void _showSnackBar(String message) {
-    final snackBar = SnackBar(
-      content: Text(message),
-      duration: const Duration(seconds: 2),
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
     );
-    ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
   String _getCurrentLanguage() {
@@ -87,34 +83,35 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
   }
 
   String getText(String thaiText, String englishText) {
-    final languageId = _getCurrentLanguage();
-    return languageId == 'TH' ? thaiText : englishText;
+    return _getCurrentLanguage() == 'TH' ? thaiText : englishText;
   }
 
-  MyTTSClass() {
-    _flutterTts.setCompletionHandler(() {
-      // Handle the completion of the TTS
-    });
-  }
-
-
-  // TTS Method
- Future<void> _speak(String text) async {
+  Future<void> _speak(String text) async {
+    text = text.replaceAll("พ.ญ.", "แพทย์หญิง");
+    text = text.replaceAll("นพ.", "นายแพทย์");
+    text = text.replaceAll("ชม.", "ชั่วโมง");
     final textParts = _splitTextByLanguage(text);
     for (final part in textParts) {
       final language = _detectLanguage(part);
       await _flutterTts.setLanguage(language == 'TH' ? 'th-TH' : 'en-US');
-      await _flutterTts.setPitch(0.3);
+      await _flutterTts.setSpeechRate(1.2); // Adjust speech rate here
+      await _flutterTts.setPitch(1.0);
       await _flutterTts.speak(part);
-      // เพิ่มดีเลย์ระยะสั้นระหว่างแต่ละส่วนของข้อความเพื่อให้แน่ใจว่า TTS อ่านครบทุกส่วน
-      await Future.delayed(
-          const Duration(milliseconds: 5000)); // Short pause between parts
+      await _flutterTts.awaitSpeakCompletion(true);
     }
   }
 
   String _detectLanguage(String text) {
     final thaiRegex = RegExp(r'[\u0E00-\u0E7F]');
-    return thaiRegex.hasMatch(text) ? 'TH' : 'EN';
+    final numberRegex = RegExp(r'[0-9]');
+
+    if (thaiRegex.hasMatch(text)) {
+      return 'TH';
+    } else if (numberRegex.hasMatch(text)) {
+      return _getCurrentLanguage();
+    } else {
+      return 'EN';
+    }
   }
 
   List<String> _splitTextByLanguage(String text) {
@@ -122,26 +119,27 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
     final buffer = StringBuffer();
     String? currentLanguage;
 
-    for (final char in text.split('')) {
+    for (var i = 0; i < text.length; i++) {
+      final char = text[i];
       final charLanguage = _detectLanguage(char);
       if (currentLanguage == null || charLanguage == currentLanguage) {
         buffer.write(char);
         currentLanguage = charLanguage;
       } else {
-        parts.add(buffer.toString());
+        parts.add(buffer.toString().replaceAll('', ''));
         buffer.clear();
         buffer.write(char);
         currentLanguage = charLanguage;
       }
     }
+
     if (buffer.isNotEmpty) {
-      parts.add(buffer.toString());
+      parts.add(buffer.toString().replaceAll('', ''));
     }
+
     return parts;
   }
 
-  //แสดง UI
-  //ส่วนหัวของ web
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -155,16 +153,13 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
         elevation: 0,
         actions: [
           IconButton(
-            onPressed: () async {
-              Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => const LoginPage()));
-            },
+            onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const LoginPage())),
             icon: const Icon(Icons.logout),
             color: Colors.white,
           ),
         ],
       ),
-// ส่วนตัวของ web
       body: patientDetails != null && medications != null
           ? SingleChildScrollView(
               padding: const EdgeInsets.all(20.0),
@@ -174,15 +169,14 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
                   _buildPatientProfileSection(),
                   const SizedBox(height: 20),
                   ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).push(MaterialPageRoute(
-                          builder: (context) => Functionmonth(hn: widget.hn)));
-                    },
+                    onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                            builder: (context) =>
+                                Functionmonth(hn: widget.hn))),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue[900],
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(0), // Square shape
-                      ),
+                          borderRadius: BorderRadius.circular(0)),
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 12),
                     ),
@@ -203,7 +197,6 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
     );
   }
 
-  //widget ส่วนประวัติผู้ป่วย
   Widget _buildPatientProfileSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -222,49 +215,41 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${getText('รหัสโรงพยาบาล', 'HN')} : ${patientDetails!['hn']}',
-                  style: const TextStyle(fontSize: 16),
-                ),
+                    '${getText('รหัสโรงพยาบาล', 'HN')} : ${patientDetails!['hn']}',
+                    style: const TextStyle(fontSize: 16)),
                 Text(
-                  '${getText('เพศ', 'Gender')} : ${patientDetails!['fix_gender_id']}',
-                  style: const TextStyle(fontSize: 16),
-                ),
+                    '${getText('เพศ', 'Gender')} : ${patientDetails!['fix_gender_id']}',
+                    style: const TextStyle(fontSize: 16)),
                 Text(
-                  '${getText('วันเกิด', 'Date of birth')} : ${_formatDate(patientDetails!['birthdate'])}',
-                  style: const TextStyle(fontSize: 16),
-                ),
+                    '${getText('วันเกิด', 'Date of birth')} : ${_formatDate(patientDetails!['birthdate'])}',
+                    style: const TextStyle(fontSize: 16)),
+                Text('${getText('อายุ', 'Age')} : ${patientDetails!['age']}',
+                    style: const TextStyle(fontSize: 16)),
                 Text(
-                  '${getText('อายุ', 'Age')} : ${patientDetails!['age']}',
-                  style: const TextStyle(fontSize: 16),
-                ),
+                    '${getText('วันที่เข้าพบแพทย์ / เลขที่', 'Episode Date / Number')} : ${_formatDate(patientDetails!['visit_date'])} ${patientDetails!['visit_time']} ${patientDetails!['en']}',
+                    style: const TextStyle(fontSize: 16)),
                 Text(
-                  '${getText('วันที่เข้าพบแพทย์ / เลขที่', 'Episode Date / Number')} : ${_formatDate(patientDetails!['visit_date'])} ${patientDetails!['visit_time']} ${patientDetails!['en']}',
-                  style: const TextStyle(fontSize: 16),
-                ),
+                    '${getText('การแพ้', 'Allergy')} : ${_formatAllergy(patientDetails!['drugaallergy'])}',
+                    style: const TextStyle(fontSize: 16)),
                 Text(
-                  '${getText('การแพ้', 'Allergy')} : ${_formatAllergy(patientDetails!['drugaallergy'])}',
-                  style: const TextStyle(fontSize: 16),
-                ),
-                Text(
-                  '${getText('ประเภทผู้ป่วย', 'Patient Type')} : ${patientDetails!['fix_visit_type_id']}',
-                  style: const TextStyle(fontSize: 16),
-                ),
+                    '${getText('ประเภทผู้ป่วย', 'Patient Type')} : ${patientDetails!['fix_visit_type_id']}',
+                    style: const TextStyle(fontSize: 16)),
                 if (patientDetails!['fix_visit_type_id'] == 'IPD')
                   Text(
-                    '${getText('ห้อง', 'Ward')} : ${patientDetails!['roombed']}',
-                    style: const TextStyle(fontSize: 16),
-                  ),
+                      '${getText('ห้อง', 'Ward')} : ${patientDetails!['roombed']}',
+                      style: const TextStyle(fontSize: 16)),
                 Center(
                   child: IconButton(
-                      icon: const Icon(Icons.volume_up),
-                      onPressed: () async {
-                        String patientDetailsText = """
-      ${patientDetails!['patient_name'] ?? getText('ไม่มีข้อมูล', 'N/A')}
-      ${getText('วันเกิด', 'Date of birth')} : ${_formatDate(patientDetails!['birthdate'])}
-      ${getText('การแพ้', 'Allergy')} : ${_formatAllergy(patientDetails!['drugaallergy'])}
-    """;
-                        _speak(patientDetailsText);
-                      }),
+                    icon: const Icon(Icons.volume_up),
+                    onPressed: () {
+                      String patientDetailsText = """
+                        ${patientDetails!['patient_name'] ?? getText('ไม่มีข้อมูล', 'N/A')}
+                        ${getText('วันเกิด', 'Date of birth')} : ${_formatDate(patientDetails!['birthdate'])}
+                        ${getText('การแพ้', 'Allergy')} : ${_formatAllergy(patientDetails!['drugaallergy'])}
+                      """;
+                      _speak(patientDetailsText);
+                    },
+                  ),
                 ),
               ],
             ),
@@ -274,7 +259,6 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
     );
   }
 
-  //widget function การจัดการต่าง ๆ
   String _formatDate(String? dateStr) {
     if (dateStr == null || dateStr.isEmpty) {
       return getText('ไม่มีข้อมูล', 'N/A');
@@ -295,7 +279,6 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
     return allergy;
   }
 
-  //widget ส่วนยาที่จัดจำหน่าย
   Widget _buildMedicationSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -310,7 +293,6 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
           itemCount: medications!.length,
           itemBuilder: (context, index) {
             final medication = medications![index];
-
             return Card(
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -325,22 +307,25 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
                         icon: const Icon(Icons.volume_up),
                         onPressed: () async {
                           String medicationText = """
-                          ${medication['item_name']}
-                          ${medication['th_name']}
-                          ${getText('คำแนะนำ', 'Instructions')} : ${medication['instruction_text_line1']} ${medication['instruction_text_line2']} 
-                          ${medication['instruction_text_line3']}""";
+                            ${medication['item_name']}
+                            ${medication['th_name']}
+                            ${getText('คำแนะนำ', 'Instructions')} : ${medication['instruction_text_line1']} ${medication['instruction_text_line2']} ${medication['instruction_text_line3']}
+                          """;
                           if (medication['item_deacription'] != null &&
                               medication['item_deacription'].isNotEmpty) {
                             medicationText += """
-                          ${getText('คำอธิบาย', 'Description')} : ${medication['item_deacription']}""";
+                              ${getText('คำอธิบาย', 'Description')} : ${medication['item_deacription']}
+                            """;
                           }
                           if (medication['item_caution'] != null &&
                               medication['item_caution'].isNotEmpty) {
                             medicationText += """
-                              ${getText('คำเตือน', 'Caution')} : ${medication['item_caution']}""";
+                              ${getText('คำเตือน', 'Caution')} : ${medication['item_caution']}
+                            """;
                           }
                           medicationText += """
-                            ${getText('ชื่อแพทย์', 'Doctor Name')} : ${medication['opddoctorname']}""";
+                            ${getText('ชื่อแพทย์', 'Doctor Name')} : ${medication['opddoctorname']}
+                          """;
                           _speak(medicationText);
                         },
                       ),
@@ -355,7 +340,6 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
     );
   }
 
-  //widget สำหรับรูปในส่วนของยา
   Widget _buildMedicationImage(String? base64Image) {
     return Align(
       alignment: Alignment.centerLeft,
@@ -376,7 +360,6 @@ class _HomeMedSheetState extends State<HomeMedSheet> {
     );
   }
 
-  //widget รายละเอียดของยา
   Widget _buildMedicationDetails(Map<String, dynamic> medication) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
